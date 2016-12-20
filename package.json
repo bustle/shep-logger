@@ -1,20 +1,23 @@
 {
-  "name": "bole",
-  "version": "3.0.2",
-  "description": "A tiny JSON logger",
+  "name": "shep-logger",
+  "version": "4.0.0",
+  "description": "A tiny JSON logger, optimized for speed, simplicity and Amazon Lambda",
   "main": "bole.js",
   "scripts": {
     "test": "node test.js"
+  },
+  "engines": {
+    "node": "4"
   },
   "keywords": [
     "logging",
     "json"
   ],
-  "author": "Rod Vagg <r@va.gg> (@rvagg)",
+  "author": "Francis Gulotta <wizard@roborooter.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rvagg/bole.git"
+    "url": "https://github.com/bustlelabs/shep-logger.git"
   },
   "dependencies": {
     "fast-safe-stringify": "~1.1.0",

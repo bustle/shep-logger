@@ -4,23 +4,24 @@ var http       = require('http')
   , bl         = require('bl')
   , listStream = require('list-stream')
   , bole       = require('./')
-  , pid        = process.pid
-  , host       = require('os').hostname()
+  , functionName = (process.env.AWS_LAMBDA_FUNCTION_NAME || null)
+  , functionVersion = (process.env.AWS_LAMBDA_FUNCTION_VERSION || null)
 
 
 function mklogobj (name, level, inp, fastTime) {
   var out = {
-          time     : fastTime ? Date.now() : new Date().toISOString()
-        , hostname : host
-        , pid      : pid
-        , level    : level
-        , name    : name
-      }
-    , k
+    time     : fastTime ? Date.now() : new Date().toISOString(),
+    functionName,
+    functionVersion,
+    level,
+    name
+  }
+  var k
 
   for (k in inp) {
-    if (Object.prototype.hasOwnProperty.call(inp, k))
+    if (Object.prototype.hasOwnProperty.call(inp, k)){
       out[k] = inp[k]
+    }
   }
 
   return out

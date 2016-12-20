@@ -1,17 +1,19 @@
 var _stringify = require('fast-safe-stringify')
-  , individual = require('individual')('$$bole', { fastTime: false }) // singleton
+  , individual = require('individual')('$$sheplogger', { fastTime: false }) // singleton
   , format     = require('./format')
-  , levels     = 'debug info warn error'.split(' ')
-  , hostname   = require('os').hostname()
-  , hostnameSt = _stringify(hostname)
-  , pid        = process.pid
+
+var levels     = 'debug info warn error'.split(' ')
+  , functionName = (process.env.AWS_LAMBDA_FUNCTION_NAME || null)
+  , functionNameSt = _stringify(functionName)
+  , functionVersion = (process.env.AWS_LAMBDA_FUNCTION_VERSION || null)
+  , functionVersionSt = _stringify(functionVersion)
   , hasObjMode = false
-  , scache     = []
+  , stringCache = []
 
 levels.forEach(function (level) {
   // prepare a common part of the stringified output
-  scache[level] = ',"hostname":' + hostnameSt + ',"pid":' + pid + ',"level":"' + level
-  Number(scache[level]) // convert internal representation to plain string
+  stringCache[level] = ',"functionName":' + functionNameSt + ',"functionVersion":' + functionVersionSt + ',"level":"' + level
+  Number(stringCache[level]) // convert internal representation to plain string
 
   if (!Array.isArray(individual[level]))
     individual[level] = []
@@ -69,7 +71,7 @@ function stringify (level, name, message, obj) {
   var k
     , s = '{"time":'
         + (individual.fastTime ? Date.now() : ('"' + new Date().toISOString() + '"'))
-        + scache[level]
+        + stringCache[level]
         + '","name":'
         + name
         + (message !== undefined ? (',"message":' + _stringify(message)) : '')
@@ -89,17 +91,19 @@ function extend (level, name, message, obj) {
   var k
     , newObj = {
           time     : individual.fastTime ? Date.now() : new Date().toISOString()
-        , hostname : hostname
-        , pid      : pid
+        , functionName : functionName
+        , functionVersion : functionVersion
         , level    : level
         , name     : name
       }
 
-  if (message !== undefined)
-    obj.message = message
-
-  for (k in obj)
+  for (k in obj) {
     newObj[k] = obj[k]
+  }
+
+  if (message !== undefined){
+    newObj.message = message
+  }
 
   return newObj
 }

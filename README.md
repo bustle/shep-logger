@@ -1,10 +1,13 @@
-# bole
+# Shep Logger
 
-**A tiny JSON logger, optimised for speed and simplicity**
+**A tiny JSON logger, optimized for speed, simplicity and Amazon Lambda**
 
-[![NPM](https://nodei.co/npm/bole.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/bole/)
+[![NPM](https://nodei.co/npm/shep-logger.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/bole/)
 
-Log JSON from within Node.js applications. The log format is obviously inspired by the excellent [Bunyan](https://github.com/trentm/node-bunyan) and is likely to be output-compatible in most cases. The difference is that **bole** aims for even more simplicity, supporting only the common-case basics.
+Forked from [`bole`](https://github.com/rvagg/bole) with a few tweaks to give more information about lambda processes. Removed `pid` and `hostname` and added `functionName` and `functionVersion`.
+
+
+## Bole readme
 
 **bole** is designed for **global singleton use**. Your application has many log sources, but they all aggregate to the same sources. You configure output in *one place* for an application, regardless of how many modules and dependencies are also using **bole** for logging.
 
@@ -35,7 +38,7 @@ mod.derp()
 
 ```text
 $ node main
-{"time":"2014-05-18T23:47:06.545Z","hostname":"tweedy","pid":27374,"level":"info","name":"mymodule","message":"Starting mymodule#derp()"}
+{"time":"2014-05-18T23:47:06.545Z","functionName":"tweedy","functionVersion":27374,"level":"info","name":"mymodule","message":"Starting mymodule#derp()"}
 ```
 
 ## Features
