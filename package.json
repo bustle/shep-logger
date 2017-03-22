@@ -1,6 +1,6 @@
 {
   "name": "shep-logger",
-  "version": "4.0.2",
+  "version": "4.1.0",
   "description": "A tiny JSON logger, optimized for speed, simplicity and Amazon Lambda",
   "main": "bole.js",
   "scripts": {
