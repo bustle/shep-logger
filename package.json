@@ -4,7 +4,8 @@
   "description": "A tiny JSON logger, optimized for speed, simplicity and Amazon Lambda",
   "main": "bole.js",
   "scripts": {
-    "test": "node test.js"
+    "test": "node test.js",
+    "lint": "standard"
   },
   "engines": {
     "node": ">=4"
@@ -20,13 +21,12 @@
     "url": "https://github.com/bustlelabs/shep-logger.git"
   },
   "dependencies": {
-    "fast-safe-stringify": "~1.1.0",
-    "individual": "~3.0.0"
+    "fast-safe-stringify": "~1.1.0"
   },
   "devDependencies": {
     "bl": "~1.1.2",
-    "hyperquest": "~1.3.0",
     "list-stream": "~1.0.1",
+    "standard": "^9.0.2",
     "tape": "~4.5.1"
   }
 }

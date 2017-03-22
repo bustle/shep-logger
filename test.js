@@ -1,32 +1,31 @@
-var http       = require('http')
-  , hreq       = require('hyperquest')
-  , test       = require('tape')
-  , bl         = require('bl')
-  , listStream = require('list-stream')
-  , bole       = require('./')
-  , functionName = (process.env.AWS_LAMBDA_FUNCTION_NAME || null)
-  , functionVersion = (process.env.AWS_LAMBDA_FUNCTION_VERSION || null)
-
+'use strict'
+const test = require('tape')
+const bl = require('bl')
+const listStream = require('list-stream')
+const bole = require('./')
+const functionName = (process.env.AWS_LAMBDA_FUNCTION_NAME || null)
+const functionVersion = (process.env.AWS_LAMBDA_FUNCTION_VERSION || null)
 
 function mklogobj (name, level, inp, fastTime) {
   var out = {
-    time     : fastTime ? Date.now() : new Date().toISOString(),
-    functionName,
-    functionVersion,
-    level,
-    name
+    time: fastTime ? Date.now() : new Date().toISOString(),
+    name,
+    level
+  }
+  if (functionName) {
+    out.functionName = functionName
+    out.functionVersion = functionVersion
   }
   var k
 
   for (k in inp) {
-    if (Object.prototype.hasOwnProperty.call(inp, k)){
+    if (Object.prototype.hasOwnProperty.call(inp, k)) {
       out[k] = inp[k]
     }
   }
 
   return out
 }
-
 
 // take a log string and zero out the millisecond field
 // to make comparison a little safer (not *entirely* safe)
@@ -36,27 +35,26 @@ function safe (str) {
             .replace(/("host":")(?:(?:localhost)|(?:::))(:\d+")/g, '$1$2')
 }
 
-
 test('test simple logging', function (t) {
   t.plan(1)
   t.on('end', bole.reset)
 
-  var sink     = bl()
-    , log      = bole('simple')
-    , expected = []
+  const sink = bl()
+  const log = bole('simple')
+  const expected = []
 
   bole.output({
-      level  : 'debug'
-    , stream : sink
+    level: 'debug',
+    stream: sink
   })
 
-  expected.push(mklogobj('simple', 'debug', { aDebug : 'object' }))
+  expected.push(mklogobj('simple', 'debug', { aDebug: 'object' }))
   log.debug({ aDebug: 'object' })
-  expected.push(mklogobj('simple', 'info', { anInfo : 'object' }))
+  expected.push(mklogobj('simple', 'info', { anInfo: 'object' }))
   log.info({ anInfo: 'object' })
-  expected.push(mklogobj('simple', 'warn', { aWarn : 'object' }))
+  expected.push(mklogobj('simple', 'warn', { aWarn: 'object' }))
   log.warn({ aWarn: 'object' })
-  expected.push(mklogobj('simple', 'error', { anError : 'object' }))
+  expected.push(mklogobj('simple', 'error', { anError: 'object' }))
   log.error({ anError: 'object' })
 
   sink.end(function () {
@@ -68,22 +66,21 @@ test('test simple logging', function (t) {
   })
 })
 
-
 test('test complex object logging', function (t) {
   t.plan(1)
   t.on('end', bole.reset)
 
-  var sink     = bl()
-    , log      = bole('simple')
-    , expected = []
-    , cplx     = {
-          aDebug : 'object'
-        , deep   : { deeper: { deeperStill: { tooDeep: 'whoa' }, arr: [ 1, 2, 3, { eh: 'wut?' } ] } }
-      }
+  var sink = bl()
+  const log = bole('simple')
+  const expected = []
+  const cplx = {
+    aDebug: 'object',
+    deep: { deeper: { deeperStill: { tooDeep: 'whoa' }, arr: [ 1, 2, 3, { eh: 'wut?' } ] } }
+  }
 
   bole.output({
-      level  : 'debug'
-    , stream : sink
+    level: 'debug',
+    stream: sink
   })
 
   expected.push(mklogobj('simple', 'debug', cplx))
@@ -98,28 +95,27 @@ test('test complex object logging', function (t) {
   })
 })
 
-
 test('test multiple logs', function (t) {
   t.plan(1)
   t.on('end', bole.reset)
 
-  var sink     = bl()
-    , log1     = bole('simple1')
-    , log2     = bole('simple2')
-    , expected = []
+  const sink = bl()
+  const log1 = bole('simple1')
+  const log2 = bole('simple2')
+  const expected = []
 
   bole.output({
-      level  : 'debug'
-    , stream : sink
+    level: 'debug',
+    stream: sink
   })
 
-  expected.push(mklogobj('simple1', 'debug', { aDebug : 'object' }))
+  expected.push(mklogobj('simple1', 'debug', { aDebug: 'object' }))
   log1.debug({ aDebug: 'object' })
-  expected.push(mklogobj('simple1', 'info', { anInfo : 'object' }))
+  expected.push(mklogobj('simple1', 'info', { anInfo: 'object' }))
   log1.info({ anInfo: 'object' })
-  expected.push(mklogobj('simple2', 'warn', { aWarn : 'object' }))
+  expected.push(mklogobj('simple2', 'warn', { aWarn: 'object' }))
   log2.warn({ aWarn: 'object' })
-  expected.push(mklogobj('simple2', 'error', { anError : 'object' }))
+  expected.push(mklogobj('simple2', 'error', { anError: 'object' }))
   log2.error({ anError: 'object' })
 
   sink.end(function () {
@@ -131,49 +127,47 @@ test('test multiple logs', function (t) {
   })
 })
 
-
 test('test multiple outputs', function (t) {
   t.plan(4)
   t.on('end', bole.reset)
 
-  var debugSink = bl()
-    , infoSink  = bl()
-    , warnSink  = bl()
-    , errorSink = bl()
-    , log       = bole('simple')
-    , expected  = []
-
+  const debugSink = bl()
+  const infoSink = bl()
+  const warnSink = bl()
+  const errorSink = bl()
+  const log = bole('simple')
+  const expected = []
 
   // add individual
   bole.output({
-      level  : 'debug'
-    , stream : debugSink
+    level: 'debug',
+    stream: debugSink
   })
 
   // add array
   bole.output([
-      {
-          level  : 'info'
-        , stream : infoSink
-      }
-    , {
-          level  : 'warn'
-        , stream : warnSink
-      }
+    {
+      level: 'info',
+      stream: infoSink
+    },
+    {
+      level: 'warn',
+      stream: warnSink
+    }
   ])
 
   bole.output({
-      level  : 'error'
-    , stream : errorSink
+    level: 'error',
+    stream: errorSink
   })
 
-  expected.push(mklogobj('simple', 'debug', { aDebug : 'object' }))
+  expected.push(mklogobj('simple', 'debug', { aDebug: 'object' }))
   log.debug({ aDebug: 'object' })
-  expected.push(mklogobj('simple', 'info', { anInfo : 'object' }))
+  expected.push(mklogobj('simple', 'info', { anInfo: 'object' }))
   log.info({ anInfo: 'object' })
-  expected.push(mklogobj('simple', 'warn', { aWarn : 'object' }))
+  expected.push(mklogobj('simple', 'warn', { aWarn: 'object' }))
   log.warn({ aWarn: 'object' })
-  expected.push(mklogobj('simple', 'error', { anError : 'object' }))
+  expected.push(mklogobj('simple', 'error', { anError: 'object' }))
   log.error({ anError: 'object' })
 
   debugSink.end()
@@ -210,19 +204,18 @@ test('test multiple outputs', function (t) {
   })
 })
 
-
 test('test string formatting', function (t) {
   t.plan(8)
   t.on('end', bole.reset)
 
   function testSingle (level, msg, args) {
-    var sink     = bl()
-      , log      = bole('strfmt')
-      , expected
+    const sink = bl()
+    const log = bole('strfmt')
+    let expected
 
     bole.output({
-        level  : level
-      , stream : sink
+      level: level,
+      stream: sink
     })
 
     expected = mklogobj('strfmt', level, msg)
@@ -250,202 +243,100 @@ test('test string formatting', function (t) {
   testSingle('error', { message: 'foo bar baz' }, [ 'foo', 'bar', 'baz' ])
 })
 
-
 test('test error formatting', function (t) {
   t.plan(1)
   t.on('end', bole.reset)
 
-  var sink     = bl()
-    , log      = bole('errfmt')
-    , err      = new Error('error msg in here')
-    , expected
+  const sink = bl()
+  const log = bole('errfmt')
+  const err = new Error('error msg in here')
+  let expected
 
   bole.output({
-      level  : 'debug'
-    , stream : sink
+    level: 'debug',
+    stream: sink
   })
 
   expected = mklogobj('errfmt', 'debug', { err: {
-      name    : 'Error'
-    , message : 'error msg in here'
-    , stack   : 'STACK'
+    name: 'Error',
+    message: 'error msg in here',
+    stack: 'STACK'
   }})
   log.debug(err)
 
   sink.end(function () {
-    var exp = JSON.stringify(expected) + '\n'
-      , act = safe(sink.slice().toString())
+    const exp = JSON.stringify(expected) + '\n'
+    let act = safe(sink.slice().toString())
 
     act = act.replace(/("stack":")Error:[^"]+/, '$1STACK')
     t.equal(act, safe(exp))
   })
 })
-
 
 test('test error formatting with message', function (t) {
   t.plan(1)
   t.on('end', bole.reset)
 
-  var sink     = bl()
-    , log      = bole('errfmt')
-    , err      = new Error('error msg in here')
-    , expected
+  const sink = bl()
+  const log = bole('errfmt')
+  const err = new Error('error msg in here')
+  let expected
 
   bole.output({
-      level  : 'debug'
-    , stream : sink
+    level: 'debug',
+    stream: sink
   })
 
   expected = mklogobj('errfmt', 'debug', {
-      message : 'this is a message'
-    , err     : {
-          name    : 'Error'
-        , message : 'error msg in here'
-        , stack   : 'STACK'
-      }
+    message: 'this is a message',
+    err: {
+      name: 'Error',
+      message: 'error msg in here',
+      stack: 'STACK'
+    }
   })
   log.debug(err, 'this is a %s', 'message')
 
   sink.end(function () {
-    var exp = JSON.stringify(expected) + '\n'
-      , act = safe(sink.slice().toString())
+    const exp = JSON.stringify(expected) + '\n'
+    let act = safe(sink.slice().toString())
 
     act = act.replace(/("stack":")Error:[^"]+/, '$1STACK')
     t.equal(act, safe(exp))
   })
 })
 
-
-test('test request object', function (t) {
-  t.on('end', bole.reset)
-
-  var sink     = bl()
-    , log      = bole('reqfmt')
-    , expected
-    , server
-    , host
-
-  bole.output({
-      level  : 'info'
-    , stream : sink
-  })
-
-  server = http.createServer(function (req, res) {
-    expected = mklogobj('reqfmt', 'info', {
-        req: {
-            method : 'GET'
-          , url    : '/foo?bar=baz'
-          , headers : {
-                host       : host
-              , connection : 'close'
-            }
-          , remoteAddress : '127.0.0.1'
-          , remotePort    : 'RPORT'
-        }
-    })
-    log.info(req)
-
-    res.end()
-
-    sink.end(function () {
-      var exp = JSON.stringify(expected) + '\n'
-        , act = safe(sink.slice().toString())
-
-      act = act.replace(/("remotePort":)\d+/, '$1"RPORT"')
-      t.equal(act, safe(exp))
-
-      server.close(t.end.bind(t))
-    })
-  })
-
-  server.listen(0, '127.0.0.1', function () {
-    hreq.get('http://' + (host = this.address().address + ':' + this.address().port) + '/foo?bar=baz')
-  })
-
-})
-
-
-test('test request object with message', function (t) {
-  t.on('end', bole.reset)
-
-  var sink     = bl()
-    , log      = bole('reqfmt')
-    , expected
-    , server
-    , host
-
-  bole.output({
-      level  : 'info'
-    , stream : sink
-  })
-
-  server = http.createServer(function (req, res) {
-    expected = mklogobj('reqfmt', 'info', {
-        message : 'this is a message'
-      , req: {
-            method : 'GET'
-          , url    : '/foo?bar=baz'
-          , headers : {
-                host       : host
-              , connection : 'close'
-            }
-          , remoteAddress : '127.0.0.1'
-          , remotePort    : 'RPORT'
-        }
-    })
-    log.info(req, 'this is a %s', 'message')
-
-    res.end()
-
-    sink.end(function () {
-      var exp = JSON.stringify(expected) + '\n'
-        , act = safe(sink.slice().toString())
-
-      act = act.replace(/("remotePort":)\d+/, '$1"RPORT"')
-      t.equal(act, safe(exp))
-
-      server.close(t.end.bind(t))
-    })
-  })
-
-  server.listen(0, '127.0.0.1', function () {
-    hreq.get('http://' + (host = this.address().address + ':' + this.address().port) + '/foo?bar=baz')
-  })
-
-})
-
-
 test('test sub logger', function (t) {
   t.plan(1)
   t.on('end', bole.reset)
 
-  var sink     = bl()
-    , log      = bole('parent')
-    , expected = []
-    , sub1
-    , sub2
+  const sink = bl()
+  const log = bole('parent')
+  const expected = []
+  let sub1
+  let sub2
 
   bole.output({
-      level  : 'debug'
-    , stream : sink
+    level: 'debug',
+    stream: sink
   })
 
-  expected.push(mklogobj('parent', 'debug', { aDebug : 'object' }))
+  expected.push(mklogobj('parent', 'debug', { aDebug: 'object' }))
   log.debug({ aDebug: 'object' })
-  expected.push(mklogobj('parent', 'info', { anInfo : 'object' }))
+  expected.push(mklogobj('parent', 'info', { anInfo: 'object' }))
   log.info({ anInfo: 'object' })
-  expected.push(mklogobj('parent', 'warn', { aWarn : 'object' }))
+  expected.push(mklogobj('parent', 'warn', { aWarn: 'object' }))
   log.warn({ aWarn: 'object' })
-  expected.push(mklogobj('parent', 'error', { anError : 'object' }))
+  expected.push(mklogobj('parent', 'error', { anError: 'object' }))
   log.error({ anError: 'object' })
 
-  expected.push(mklogobj('parent:sub1', 'debug', { aDebug : 'object' }))
+  expected.push(mklogobj('parent:sub1', 'debug', { aDebug: 'object' }))
   ;(sub1 = log('sub1')).debug({ aDebug: 'object' })
-  expected.push(mklogobj('parent:sub1', 'info', { anInfo : 'object' }))
+  expected.push(mklogobj('parent:sub1', 'info', { anInfo: 'object' }))
   sub1.info({ anInfo: 'object' })
-  expected.push(mklogobj('parent:sub2', 'warn', { aWarn : 'object' }))
+  expected.push(mklogobj('parent:sub2', 'warn', { aWarn: 'object' }))
   ;(sub2 = log('sub2')).warn({ aWarn: 'object' })
-  expected.push(mklogobj('parent:sub2:subsub', 'error', { anError : 'object' }))
+  expected.push(mklogobj('parent:sub2:subsub', 'error', { anError: 'object' }))
   sub2('subsub').error({ anError: 'object' })
 
   sink.end(function () {
@@ -460,55 +351,55 @@ test('test sub logger', function (t) {
 test('test object logging', function (t) {
   t.on('end', bole.reset)
 
-  var sink     = listStream.obj()
-    , log      = bole('simple')
-    , expected = []
+  const sink = listStream.obj()
+  const log = bole('simple')
+  const expected = []
 
   bole.output({
-      level      : 'debug'
-    , stream     : sink
+    level: 'debug',
+    stream: sink
   })
 
-  expected.push(mklogobj('simple', 'debug', { aDebug : 'object' }))
+  expected.push(mklogobj('simple', 'debug', { aDebug: 'object' }))
   log.debug({ aDebug: 'object' })
-  expected.push(mklogobj('simple', 'info', { anInfo : 'object' }))
+  expected.push(mklogobj('simple', 'info', { anInfo: 'object' }))
   log.info({ anInfo: 'object' })
-  expected.push(mklogobj('simple', 'warn', { aWarn : 'object' }))
+  expected.push(mklogobj('simple', 'warn', { aWarn: 'object' }))
   log.warn({ aWarn: 'object' })
-  expected.push(mklogobj('simple', 'error', { anError : 'object' }))
+  expected.push(mklogobj('simple', 'error', { anError: 'object' }))
   log.error({ anError: 'object' })
 
   sink.end(function () {
     t.equal(sink.length, expected.length, 'correct number of log entries')
-    for (var i = 0; i < expected.length; i++)
+    for (var i = 0; i < expected.length; i++) {
       t.deepEqual(sink.get(i), expected[i], 'correct log entry #' + i)
+    }
     t.end()
   })
 })
-
 
 test('test fast time', function (t) {
   t.plan(1)
   t.on('end', bole.reset)
 
-  var sink     = bl()
-    , log      = bole('simple')
-    , expected = []
+  const sink = bl()
+  const log = bole('simple')
+  let expected = []
 
   bole.output({
-      level  : 'debug'
-    , stream : sink
+    level: 'debug',
+    stream: sink
   })
 
   bole.setFastTime(true)
 
-  expected.push(mklogobj('simple', 'debug', { aDebug : 'object' }, true))
+  expected.push(mklogobj('simple', 'debug', { aDebug: 'object' }, true))
   log.debug({ aDebug: 'object' })
-  expected.push(mklogobj('simple', 'info', { anInfo : 'object' }, true))
+  expected.push(mklogobj('simple', 'info', { anInfo: 'object' }, true))
   log.info({ anInfo: 'object' })
-  expected.push(mklogobj('simple', 'warn', { aWarn : 'object' }, true))
+  expected.push(mklogobj('simple', 'warn', { aWarn: 'object' }, true))
   log.warn({ aWarn: 'object' })
-  expected.push(mklogobj('simple', 'error', { anError : 'object' }, true))
+  expected.push(mklogobj('simple', 'error', { anError: 'object' }, true))
   log.error({ anError: 'object' })
 
   sink.end(function () {

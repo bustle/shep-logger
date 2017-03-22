@@ -1,166 +1,130 @@
-var _stringify = require('fast-safe-stringify')
-  , individual = require('individual')('$$sheplogger', { fastTime: false }) // singleton
-  , format     = require('./format')
+'use strict'
+const safeStringify = require('fast-safe-stringify')
+const state = { fastTime: false }
+const format = require('util').format
 
-var levels     = 'debug info warn error'.split(' ')
-  , functionName = (process.env.AWS_LAMBDA_FUNCTION_NAME || null)
-  , functionNameSt = _stringify(functionName)
-  , functionVersion = (process.env.AWS_LAMBDA_FUNCTION_VERSION || null)
-  , functionVersionSt = _stringify(functionVersion)
-  , hasObjMode = false
-  , stringCache = []
+const levels = 'debug info warn error'.split(' ')
+const functionName = (process.env.AWS_LAMBDA_FUNCTION_NAME || null)
+const functionVersion = (process.env.AWS_LAMBDA_FUNCTION_VERSION || null)
+let hasObjMode = false
 
+// prepare a common part of the stringified output
+const defaults = {}
 levels.forEach(function (level) {
-  // prepare a common part of the stringified output
-  stringCache[level] = ',"functionName":' + functionNameSt + ',"functionVersion":' + functionVersionSt + ',"level":"' + level
-  Number(stringCache[level]) // convert internal representation to plain string
+  defaults[level] = { level }
+  if (functionName) {
+    Object.assign(defaults[level], { functionName, functionVersion })
+  }
 
-  if (!Array.isArray(individual[level]))
-    individual[level] = []
+  if (!Array.isArray(state[level])) {
+    state[level] = []
+  }
 })
 
-
 function stackToString (e) {
-  var s = e.stack
-    , ce
+  let s = e.stack
+  let causeError
 
-  if (typeof e.cause === 'function' && (ce = e.cause()))
-    s += '\nCaused by: ' + stackToString(ce)
-
+  if (typeof e.cause === 'function' && (causeError = e.cause())) {
+    s += '\nCaused by: ' + stackToString(causeError)
+  }
   return s
 }
 
-
 function errorToOut (err, out) {
   out.err = {
-      name    : err.name
-    , message : err.message
-    , code    : err.code // perhaps
-    , stack   : stackToString(err)
+    name: err.name,
+    message: err.message,
+    code: err.code, // perhaps
+    stack: stackToString(err)
   }
 }
-
 
 function requestToOut (req, out) {
   out.req = {
-      method        : req.method
-    , url           : req.url
-    , headers       : req.headers
-    , remoteAddress : req.connection.remoteAddress
-    , remotePort    : req.connection.remotePort
+    method: req.method,
+    url: req.url,
+    headers: req.headers,
+    remoteAddress: req.connection.remoteAddress,
+    remotePort: req.connection.remotePort
   }
 }
-
-
-function objectToOut (obj, out) {
-  var k
-
-  for (k in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, k))
-      out[k] = obj[k]
-  }
-}
-
 
 function objectMode (stream) {
   return stream._writableState && stream._writableState.objectMode === true
 }
 
+function makeLogObject (level, name, message, obj) {
+  const line = Object.assign({
+    time: state.fastTime ? Date.now() : new Date().toISOString(),
+    name
+  }, defaults[level])
+
+  if (message !== undefined) {
+    line.message = message
+  }
+  Object.assign(line, obj)
+  return line
+}
 
 function stringify (level, name, message, obj) {
-  var k
-    , s = '{"time":'
-        + (individual.fastTime ? Date.now() : ('"' + new Date().toISOString() + '"'))
-        + stringCache[level]
-        + '","name":'
-        + name
-        + (message !== undefined ? (',"message":' + _stringify(message)) : '')
-
-  for (k in obj)
-    s += ',' + _stringify(k) + ':' + _stringify(obj[k])
-
-  s += '}'
-
-  Number(s) // convert internal representation to plain string
-
-  return s
+  return safeStringify(makeLogObject(level, name, message, obj))
 }
-
-
-function extend (level, name, message, obj) {
-  var k
-    , newObj = {
-          time     : individual.fastTime ? Date.now() : new Date().toISOString()
-        , functionName : functionName
-        , functionVersion : functionVersion
-        , level    : level
-        , name     : name
-      }
-
-  for (k in obj) {
-    newObj[k] = obj[k]
-  }
-
-  if (message !== undefined){
-    newObj.message = message
-  }
-
-  return newObj
-}
-
 
 function levelLogger (level, name) {
-  var outputs = individual[level]
-    , nameSt  = _stringify(name)
+  var outputs = state[level]
 
-  return function namedLevelLogger (inp, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16) {
-    if (outputs.length === 0)
-      return
+  return function namedLevelLogger (input, a2) {
+    if (outputs.length === 0) { return }
 
-    var out = {}
-      , objectOut
-      , i = 0
-      , l = outputs.length
-      , stringified
-      , message
+    let out = {}
+    let objectOut
+    let i = 0
+    let l = outputs.length
+    let stringified
+    let message
 
-    if (typeof inp === 'string' || inp == null) {
-      if (!(message = format(inp, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16)))
+    if (typeof input === 'string' || input == null) {
+      if (!(message = format.apply(null, arguments))) {
         message = undefined
+      }
     } else {
-      if (!(message = format(a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16)))
+      if (!(message = format.apply(null, Array.prototype.slice.call(arguments, 1)))) {
         message = undefined
-      if (typeof inp === 'boolean')
-        message = String(inp)
-      else if (inp instanceof Error) {
-        errorToOut(inp, out)
-      } else if (typeof inp === 'object') {
-        if (inp.method && inp.url && inp.headers && inp.socket)
-          requestToOut(inp, out)
-        else
-          objectToOut(inp, out)
+      }
+      if (typeof input === 'boolean') {
+        message = String(input)
+      } else if (input instanceof Error) {
+        errorToOut(input, out)
+      } else if (typeof input === 'object') {
+        if (input.method && input.url && input.headers && input.socket) {
+          requestToOut(input, out)
+        } else {
+          Object.assign(out, input)
+        }
       }
     }
 
     if (l === 1 && !hasObjMode) { // fast, standard case
-      outputs[0].write(new Buffer(stringify(level, nameSt, message, out) + '\n'))
+      outputs[0].write(new Buffer(stringify(level, name, message, out) + '\n'))
       return
     }
 
     for (; i < l; i++) {
       if (objectMode(outputs[i])) {
-        if (objectOut === undefined) // lazy object completion
-          objectOut = extend(level, name, message, out)
+        if (objectOut === undefined) { // lazy object creation
+          objectOut = makeLogObject(level, name, message, out)
+        }
         outputs[i].write(objectOut)
       } else {
-        if (stringified === undefined) // lazy stringify
-          stringified = new Buffer(stringify(level, nameSt, message, out) + '\n')
+        if (stringified === undefined) { // lazy stringify
+          stringified = new Buffer(stringify(level, name, message, out) + '\n')
+        }
         outputs[i].write(stringified)
       }
     }
   }
 }
-
 
 function bole (name) {
   function boleLogger (subname) {
@@ -175,49 +139,50 @@ function bole (name) {
   return levels.reduce(makeLogger, boleLogger)
 }
 
-
 bole.output = function output (opt) {
-  var i = 0, b
+  let i = 0
+  let b
 
   if (Array.isArray(opt)) {
     opt.forEach(bole.output)
     return bole
   }
 
-  if (typeof opt.level !== 'string')
+  if (typeof opt.level !== 'string') {
     throw new TypeError('Must provide a "level" option')
+  }
 
   for (; i < levels.length; i++) {
-    if (!b && levels[i] === opt.level)
+    if (!b && levels[i] === opt.level) {
       b = true
+    }
 
     if (b) {
-      if (opt.stream && objectMode(opt.stream))
+      if (opt.stream && objectMode(opt.stream)) {
         hasObjMode = true
-      individual[levels[i]].push(opt.stream)
+      }
+      state[levels[i]].push(opt.stream)
     }
   }
 
   return bole
 }
 
-
 bole.reset = function reset () {
   levels.forEach(function (level) {
-    individual[level].splice(0, individual[level].length)
+    state[level].splice(0, state[level].length)
   })
-  individual.fastTime = false
+  state.fastTime = false
   return bole
 }
-
 
 bole.setFastTime = function setFastTime (b) {
-  if (!arguments.length)
-    individual.fastTime = true
-  else
-    individual.fastTime = b
+  if (!arguments.length) {
+    state.fastTime = true
+  } else {
+    state.fastTime = b
+  }
   return bole
 }
-
 
 module.exports = bole
