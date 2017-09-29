@@ -3,6 +3,7 @@ const test = require('tape')
 const bl = require('bl')
 const listStream = require('list-stream')
 const bole = require('./')
+const functionEnv = (process.env.ENV || null)
 const functionName = (process.env.AWS_LAMBDA_FUNCTION_NAME || null)
 const functionVersion = (process.env.AWS_LAMBDA_FUNCTION_VERSION || null)
 
@@ -15,6 +16,7 @@ function mklogobj (name, level, inp, fastTime) {
   if (functionName) {
     out.functionName = functionName
     out.functionVersion = functionVersion
+    out.functionEnv = functionEnv
   }
   var k
 

@@ -6,6 +6,7 @@ const format = require('util').format
 const levels = 'debug info warn error'.split(' ')
 const functionName = (process.env.AWS_LAMBDA_FUNCTION_NAME || null)
 const functionVersion = (process.env.AWS_LAMBDA_FUNCTION_VERSION || null)
+const functionEnv = (process.env.ENV || null)
 let hasObjMode = false
 
 // prepare a common part of the stringified output
@@ -13,7 +14,7 @@ const defaults = {}
 levels.forEach(function (level) {
   defaults[level] = { level }
   if (functionName) {
-    Object.assign(defaults[level], { functionName, functionVersion })
+    Object.assign(defaults[level], { functionName, functionVersion, functionEnv })
   }
 
   if (!Array.isArray(state[level])) {
